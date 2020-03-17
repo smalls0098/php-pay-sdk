@@ -53,7 +53,7 @@ class Logger
      */
     protected $config = [
         'file' => null,
-        'identify' => 'smalls.app.supports',
+        'identify' => 'smalls.pay.supports',
         'level' => BaseLogger::DEBUG,
         'type' => 'daily',
         'max_files' => 30,

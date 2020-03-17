@@ -61,7 +61,7 @@ class PayManager
     protected function registerLogService()
     {
         $config = $this->config->get('log');
-        $config['identify'] = 'yansongda.pay';
+        $config['identify'] = 'smalls.pay.supports';
 
         $logger = new Logger();
         $logger->setConfig($config);
