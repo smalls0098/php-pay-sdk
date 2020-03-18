@@ -4,14 +4,18 @@ declare (strict_types=1);
 namespace Smalls\Pay\Gateways;
 
 use Smalls\Pay\Events;
+use Smalls\Pay\Exception\GatewayException;
 use Smalls\Pay\Exception\InvalidArgumentException;
 use Smalls\Pay\Exception\InvalidGatewayException;
+use Smalls\Pay\Exception\InvalidSignException;
 use Smalls\Pay\Gateways\Alipay\Support;
 use Smalls\Pay\Interfaces\IGateway;
 use Smalls\Pay\Interfaces\IGatewayApplication;
 use Smalls\Pay\Supports\Collection;
 use Smalls\Pay\Supports\Config;
 use Smalls\Pay\Supports\Str;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Created By 1
@@ -160,31 +164,83 @@ class AliPay implements IGatewayApplication
 
     public function find($order, string $type)
     {
-        // TODO: Implement find() method.
+        $gateway = get_class($this) . '\\Method\\' . Str::studly($type) . 'Gateway';
+
+        if (!class_exists($gateway) || !is_callable([new $gateway(), 'find'])) {
+            throw new GatewayException("{$gateway} Done Not Exist Or Done Not Has FIND Method");
+        }
+
+        $config = call_user_func([new $gateway(), 'find'], $order);
+
+        $this->payload['method'] = $config['method'];
+        $this->payload['biz_content'] = $config['biz_content'];
+        $this->payload['sign'] = Support::generateSign($this->payload);
+
+        Events::dispatch(new Events\MethodCalled('Alipay', 'Find', $this->gateway, $this->payload));
+
+        return Support::requestApi($this->payload);
     }
 
     public function refund(array $order)
     {
-        // TODO: Implement refund() method.
+        $this->payload['method'] = 'alipay.trade.refund';
+        $this->payload['biz_content'] = json_encode($order);
+        $this->payload['sign'] = Support::generateSign($this->payload);
+
+        Events::dispatch(new Events\MethodCalled('Alipay', 'Refund', $this->gateway, $this->payload));
+
+        return Support::requestApi($this->payload);
     }
 
     public function cancel($order)
     {
-        // TODO: Implement cancel() method.
+        $this->payload['method'] = 'alipay.trade.cancel';
+        $this->payload['biz_content'] = json_encode(is_array($order) ? $order : ['out_trade_no' => $order]);
+        $this->payload['sign'] = Support::generateSign($this->payload);
+
+        Events::dispatch(new Events\MethodCalled('Alipay', 'Cancel', $this->gateway, $this->payload));
+
+        return Support::requestApi($this->payload);
     }
 
     public function close($order)
     {
-        // TODO: Implement close() method.
+        $this->payload['method'] = 'alipay.trade.close';
+        $this->payload['biz_content'] = json_encode(is_array($order) ? $order : ['out_trade_no' => $order]);
+        $this->payload['sign'] = Support::generateSign($this->payload);
+
+        Events::dispatch(new Events\MethodCalled('Alipay', 'Close', $this->gateway, $this->payload));
+
+        return Support::requestApi($this->payload);
     }
 
-    public function verify($content, bool $refund)
+    public function verify($data, bool $refund)
     {
-        // TODO: Implement verify() method.
+        if (is_null($data)) {
+            $request = Request::createFromGlobals();
+
+            $data = $request->request->count() > 0 ? $request->request->all() : $request->query->all();
+        }
+
+        if (isset($data['fund_bill_list'])) {
+            $data['fund_bill_list'] = htmlspecialchars_decode($data['fund_bill_list']);
+        }
+
+        Events::dispatch(new Events\RequestReceived('Alipay', '', $data));
+
+        if (Support::verifySign($data)) {
+            return new Collection($data);
+        }
+
+        Events::dispatch(new Events\SignFailed('Alipay', '', $data));
+
+        throw new InvalidSignException('Alipay Sign Verify FAILED');
     }
 
     public function success()
     {
-        // TODO: Implement success() method.
+        Events::dispatch(new Events\MethodCalled('Alipay', 'Success', $this->gateway));
+
+        return Response::create('success');
     }
 }
