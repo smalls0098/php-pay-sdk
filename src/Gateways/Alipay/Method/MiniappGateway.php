@@ -15,7 +15,7 @@ use Smalls\Pay\Gateways\Alipay\Support;
  * Email：smalls0098@gmail.com
  * Date：2020/3/16 - 15:22
  **/
-class MiniAppGateway extends Gateway
+class MiniappGateway extends Gateway
 {
 
     /**

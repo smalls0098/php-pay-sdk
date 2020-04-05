@@ -72,7 +72,7 @@ class WeChat implements IGatewayApplication
     public function pay($gateway, $params = [])
     {
         $this->payload = array_merge($this->payload, $params);
-        $gateway = get_class($this) . '\\Method\\' . Str::studly($gateway) . 'Gateway';
+        $gateway = __NAMESPACE__ . '\\Wechat\\Method\\' . Str::studly($gateway) . 'Gateway';
         if (class_exists($gateway)) {
             return $this->makePay($gateway);
         }
