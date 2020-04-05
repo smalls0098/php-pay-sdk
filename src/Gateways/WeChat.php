@@ -7,7 +7,7 @@ use Smalls\Pay\Events;
 use Smalls\Pay\Exception\GatewayException;
 use Smalls\Pay\Exception\InvalidGatewayException;
 use Smalls\Pay\Exception\InvalidSignException;
-use Smalls\Pay\gateways\Wechat\Support;
+use Smalls\Pay\Gateways\Wechat\Support;
 use Smalls\Pay\Interfaces\IGateway;
 use Smalls\Pay\Interfaces\IGatewayApplication;
 use Smalls\Pay\Log;

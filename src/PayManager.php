@@ -8,7 +8,6 @@ use Smalls\Pay\Interfaces\IGatewayApplication;
 use Smalls\Pay\Listeners\KernelLogSubscriber;
 use Smalls\Pay\Supports\Config;
 use Smalls\Pay\Supports\Logger;
-use Smalls\Pay\Supports\Str;
 
 /**
  * Created By 1
@@ -40,7 +39,7 @@ class PayManager
 
     protected function create($method): IGatewayApplication
     {
-        $gateway = __NAMESPACE__ . '\\Gateways\\' . Str::studly($method);
+        $gateway = __NAMESPACE__ . '\\Gateways\\' . $this->convertType($method);
         if (class_exists($gateway)) {
             return self::make($gateway);
         }
@@ -74,6 +73,19 @@ class PayManager
         Events::setDispatcher(Events::createDispatcher());
 
         Events::addSubscriber(new KernelLogSubscriber());
+    }
+
+
+    private function convertType($method)
+    {
+        switch ($method) {
+            case 'wechat':
+                return 'WeChat';
+            case 'alipay':
+                return 'AliPay';
+            case 'qqpay':
+                return 'QQPay';
+        }
     }
 
 }
