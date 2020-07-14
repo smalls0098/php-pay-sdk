@@ -27,14 +27,27 @@ class Support
 {
     use HttpRequest;
 
+    /**
+     * 单例模式
+     * @var Support
+     */
     private static $instance;
 
+    /**
+     * 支付的URL地址
+     * @var string
+     */
     private $baseUri;
+
     /**
      * @var Config
      */
     private $config;
 
+    /**
+     * http选项
+     * @var HttpRequest
+     */
     private $httpOptions;
 
     private function __construct(Config $config)

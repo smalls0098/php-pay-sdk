@@ -5,6 +5,7 @@ namespace Smalls\Pay\Gateways;
 
 use Smalls\Pay\Events;
 use Smalls\Pay\Exception\GatewayException;
+use Smalls\Pay\Exception\InvalidArgumentException;
 use Smalls\Pay\Exception\InvalidGatewayException;
 use Smalls\Pay\Exception\InvalidSignException;
 use Smalls\Pay\Gateways\Wechat\Support;
@@ -16,6 +17,7 @@ use Smalls\Pay\Supports\Config;
 use Smalls\Pay\Supports\Request;
 use Smalls\Pay\Supports\Str;
 use Smalls\Pay\Supports\Xml;
+use Symfony\Component\HttpFoundation\Request as requestSymfony;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -79,6 +81,13 @@ class WeChat implements IGatewayApplication
         throw new InvalidGatewayException("Pay Gateway [{$gateway}] Not Exists");
     }
 
+
+    /**
+     * 支付下单
+     * @param string $gateway 网关
+     * @return mixed
+     * @throws InvalidGatewayException
+     */
     protected function makePay($gateway)
     {
         $app = new $gateway();
@@ -92,6 +101,14 @@ class WeChat implements IGatewayApplication
         throw new InvalidGatewayException("Pay Gateway [{$gateway}] Must Be An Instance Of GatewayInterface");
     }
 
+
+    /**
+     * 查询订单
+     * @param $order
+     * @param string $type
+     * @return Collection
+     * @throws GatewayException
+     */
     public function find($order, string $type = 'wap'): Collection
     {
         if ('wap' != $type) {
@@ -115,6 +132,12 @@ class WeChat implements IGatewayApplication
         );
     }
 
+
+    /**
+     * 订单退款
+     * @param array $order 订单信息
+     * @return Collection
+     */
     public function refund(array $order)
     {
         $this->payload = Support::filterPayload($this->payload, $order, true);
@@ -128,6 +151,12 @@ class WeChat implements IGatewayApplication
         );
     }
 
+
+    /**
+     * 取消订单
+     * @param $order
+     * @return Collection
+     */
     public function cancel($order)
     {
         unset($this->payload['spbill_create_ip']);
@@ -143,6 +172,12 @@ class WeChat implements IGatewayApplication
         );
     }
 
+
+    /**
+     * 关闭订单
+     * @param $order
+     * @return Collection
+     */
     public function close($order)
     {
         unset($this->payload['spbill_create_ip']);
@@ -154,9 +189,18 @@ class WeChat implements IGatewayApplication
         return Support::requestApi('pay/closeorder', $this->payload);
     }
 
+
+    /**
+     * 异步回调校验
+     * @param $content
+     * @param bool $refund
+     * @return Collection
+     * @throws InvalidSignException
+     * @throws InvalidArgumentException
+     */
     public function verify($content, bool $refund)
     {
-        $content = $content ?? \Symfony\Component\HttpFoundation\Request::createFromGlobals()->getContent();
+        $content = $content ?? requestSymfony::createFromGlobals()->getContent();
 
         Events::dispatch(new Events\RequestReceived('Wechat', '', [$content]));
 
@@ -177,6 +221,11 @@ class WeChat implements IGatewayApplication
         throw new InvalidSignException('Wechat Sign Verify FAILED');
     }
 
+    /**
+     * 返回成功
+     * @return Response
+     * @throws InvalidArgumentException
+     */
     public function success()
     {
         Events::dispatch(new Events\MethodCalled('Wechat', 'Success', $this->gateway));

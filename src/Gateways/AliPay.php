@@ -6,6 +6,7 @@ namespace Smalls\Pay\Gateways;
 use Smalls\Pay\Events;
 use Smalls\Pay\Exception\GatewayException;
 use Smalls\Pay\Exception\InvalidArgumentException;
+use Smalls\Pay\Exception\InvalidConfigException;
 use Smalls\Pay\Exception\InvalidGatewayException;
 use Smalls\Pay\Exception\InvalidSignException;
 use Smalls\Pay\Gateways\Alipay\Support;
@@ -115,6 +116,15 @@ class AliPay implements IGatewayApplication
         return $customize;
     }
 
+    /**
+     * 扩展
+     * @param string $method
+     * @param callable $function
+     * @param bool $now
+     * @return Collection|null
+     * @throws InvalidArgumentException
+     * @throws InvalidConfigException
+     */
     public function extend(string $method, callable $function, bool $now = true): ?Collection
     {
         if (!$now && !method_exists($this, $method)) {
@@ -142,6 +152,13 @@ class AliPay implements IGatewayApplication
     }
 
 
+    /**
+     * 支付下单
+     * @param string $gateway 网关
+     * @param array $params 参数
+     * @return mixed
+     * @throws InvalidGatewayException
+     */
     public function pay($gateway, $params)
     {
         Events::dispatch(new Events\PayStarting('Alipay', $gateway, $params));
@@ -162,6 +179,14 @@ class AliPay implements IGatewayApplication
         throw new InvalidGatewayException("Pay Gateway [{$gateway}] not exists");
     }
 
+    /**
+     * 查询订单
+     * @param $order
+     * @param string $type
+     * @return Collection
+     * @throws GatewayException
+     * @throws InvalidConfigException
+     */
     public function find($order, string $type)
     {
         $gateway = get_class($this) . '\\Method\\' . Str::studly($type) . 'Gateway';
@@ -181,6 +206,12 @@ class AliPay implements IGatewayApplication
         return Support::requestApi($this->payload);
     }
 
+    /**
+     * 订单退款
+     * @param array $order 订单信息
+     * @return Collection
+     * @throws InvalidConfigException
+     */
     public function refund(array $order)
     {
         $this->payload['method'] = 'alipay.trade.refund';
@@ -192,6 +223,12 @@ class AliPay implements IGatewayApplication
         return Support::requestApi($this->payload);
     }
 
+    /**
+     * 取消订单
+     * @param $order
+     * @return Collection
+     * @throws InvalidConfigException
+     */
     public function cancel($order)
     {
         $this->payload['method'] = 'alipay.trade.cancel';
@@ -203,6 +240,12 @@ class AliPay implements IGatewayApplication
         return Support::requestApi($this->payload);
     }
 
+    /**
+     * 关闭订单
+     * @param $order
+     * @return Collection
+     * @throws InvalidConfigException
+     */
     public function close($order)
     {
         $this->payload['method'] = 'alipay.trade.close';
@@ -214,9 +257,17 @@ class AliPay implements IGatewayApplication
         return Support::requestApi($this->payload);
     }
 
-    public function verify($data, bool $refund)
+    /**
+     * 异步回调校验
+     * @param array $data
+     * @param bool $refund
+     * @return Collection
+     * @throws InvalidSignException
+     * @throws InvalidConfigException
+     */
+    public function verify($data = [], bool $refund = false)
     {
-        if (is_null($data)) {
+        if (!$data) {
             $request = Request::createFromGlobals();
 
             $data = $request->request->count() > 0 ? $request->request->all() : $request->query->all();
@@ -237,6 +288,10 @@ class AliPay implements IGatewayApplication
         throw new InvalidSignException('Alipay Sign Verify FAILED');
     }
 
+    /**
+     * 返回成功
+     * @return Response
+     */
     public function success()
     {
         Events::dispatch(new Events\MethodCalled('Alipay', 'Success', $this->gateway));
